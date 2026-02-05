@@ -25,19 +25,38 @@ const formatDate = (raw: string) => {
 };
 
 export default async function DashboardPage() {
-  // Fetch sessions from the local public JSON file via the API (no cache)
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT ?? 3000}`);
-  const fetchUrl = new URL("/api/sessions", baseUrl).toString();
-
+  // Load sessions: prefer server-side direct file read (fast & reliable), fallback to API fetch
   let payload: { sessions?: unknown[] } = { sessions: [] };
   try {
-    const res = await fetch(fetchUrl, { cache: "no-store" });
-    if (!res.ok) throw new Error(`Failed to fetch ${fetchUrl}: ${res.status}`);
-    payload = await res.json();
+    // Try to read directly from the bundled public JSON file (server-side)
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const jsonPath = path.join(process.cwd(), "public", "sessions.json");
+    const raw = await fs.readFile(jsonPath, "utf8");
+    try {
+      payload.sessions = JSON.parse(raw) as unknown[];
+    } catch {
+      const normalized = raw.replace(/}\s*{/g, "},\n{");
+      payload.sessions = JSON.parse("[" + normalized + "]") as unknown[];
+    }
   } catch (err) {
-    console.error("[dashboard] failed to fetch sessions:", err);
+    // If reading from disk fails (serverless/platform restrictions), fall back to fetching the API endpoint
+    console.warn("[dashboard] failed to read sessions.json from disk, falling back to HTTP fetch:", String(err));
+    try {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL ??
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT ?? 3000}`);
+      const fetchUrl = new URL("/api/sessions", baseUrl).toString();
+      const res = await fetch(fetchUrl, { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        payload.sessions = json.sessions ?? [];
+      } else {
+        console.warn("[dashboard] fetch /api/sessions returned", res.status);
+      }
+    } catch (err2) {
+      console.error("[dashboard] failed to fetch sessions as a fallback:", err2);
+    }
   }
 
   const sessions: { id: number; hash?: string; reaction_time: number; violated: boolean; date: string }[] =
