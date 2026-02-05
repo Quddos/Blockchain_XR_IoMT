@@ -1,7 +1,7 @@
 Project overview
-**SynecliptXR: Adaptive Visualization VR Cognitive Assessment System with AI-Driven Stroke Rehabilitation Insight.**
+**Trust‑Aware Blockchain‑XR: Rehabilitation & Adaptive IoMT Framework.**
 
-SynecliptXR is an experimental VR system and supporting web service for adaptive visualization, cognitive assessment, and stroke rehabilitation insight. The system integrates a Unity XR application running on Meta Quest 3 devices with a Next.js web dashboard and a Neon-hosted PostgreSQL database. Unity clients (Quest headsets) upload per-session rehabilitation metrics to a REST API. Clinicians can view live session data and trends on the dashboard.
+This repository demonstrates the Trust-Aware Blockchain-XR framework for secure, adaptive IoMT rehabilitation systems. The project integrates XR clients with a Next.js web dashboard and exposes session telemetry (including reaction times and violation flags) via a local `public/sessions.json` file and a `/api/sessions` endpoint. The dashboard visualizes trust signals and reaction-time trends aligned with the research.
 <img width="1916" height="970" alt="image" src="https://github.com/user-attachments/assets/feba3bfe-84df-4110-bdfe-a02b11811c30" />
 ![IMG_5171](https://github.com/user-attachments/assets/5e6c7bbf-a49e-4ad1-9253-18be3fdc5090)
 
@@ -40,9 +40,9 @@ Table of contents
 
 ---
 
-## VR Stroke Rehabilitation Dashboard
+## Trust‑Aware Blockchain‑XR Dashboard
 
-Full-stack Next.js 14 (App Router) dashboard backed by Neon Postgres. Unity/Quest headsets upload session JSON via the `/api/sessions` route, and clinicians can review smoothness, timing, and bilateral balance trends inside the dashboard.
+Full-stack Next.js 14 (App Router) dashboard for visualizing reaction-time and trust signals from XR rehabilitation sessions. By default the API will read from `public/sessions.json` (if present) and expose `{ sessions: [...] }` at `/api/sessions` — this allows rapid prototyping and alignment with the research dataset.
 
 ### Tech Stack
 
@@ -197,8 +197,8 @@ Endpoint: `POST /api/sessions`
 - Stores session into the `sessions` table.
 
 Endpoint: `GET /api/sessions`
-- Returns `{ sessions: [...] }` JSON listing stored sessions.
-- CORS headers are present to allow device uploads.
+- Returns `{ sessions: [...] }` JSON listing sessions. When `public/sessions.json` is present, the API prefers that file and returns its parsed entries (useful for research/alignment with the paper). 
+- CORS headers are present to allow device uploads and prototyping.
 
 Example curl POST
 

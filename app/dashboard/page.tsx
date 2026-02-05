@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import { TrendCharts } from "@/components/dashboard/TrendCharts";
-import { getSessions } from "@/lib/sessions";
+import { TrendCharts } from "@/components/dashboard/TrendCharts";;
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "VR Stroke Rehab | Dashboard",
+  title: "Trust‑Aware Blockchain‑XR | Dashboard",
   description:
-    "Real-time insight into Unity VR stroke rehabilitation sessions.",
+    "Dashboard for the Trust-Aware Blockchain-XR framework: shows reaction time, violation flags and trust signals from IoMT sessions.",
 };
 
 const formatNumber = (value: number, digits = 1) =>
@@ -26,16 +25,17 @@ const formatDate = (raw: string) => {
 };
 
 export default async function DashboardPage() {
-  const sessions = await getSessions();
+  // Fetch sessions from the local public JSON file via the API (no cache)
+  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/sessions`, { cache: "no-store" });
+  const payload = await res.json();
+  const sessions: { id: number; hash?: string; reaction_time: number; violated: boolean; date: string }[] = payload.sessions || [];
 
-  const averageSmoothness =
-    sessions.reduce((sum, session) => sum + session.smoothness, 0) /
-    (sessions.length || 1);
+  const averageReaction =
+    sessions.reduce((sum, s) => sum + (s.reaction_time || 0), 0) / (sessions.length || 1);
 
-  const bestScore = sessions.reduce(
-    (max, session) => Math.max(max, session.final_score),
-    0,
-  );
+  const violationsCount = sessions.reduce((sum, s) => sum + (s.violated ? 1 : 0), 0);
+
+  const trustRate = ((sessions.length - violationsCount) / (sessions.length || 1)) * 100;
 
   const latestSessions = sessions.slice(0, 8);
 
@@ -44,51 +44,57 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-7xl px-6 py-10">
         <header className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-600">
-              VR Stroke Rehabilitation
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#06b6d4]">
+              Trust‑Aware Blockchain‑XR
             </p>
-            <h1 className="text-3xl font-bold text-slate-900">
-              Patient Progress Dashboard
+            <h1 className="text-3xl font-bold text-[#0f172a]">
+              Adaptive IoMT Rehabilitation Dashboard
             </h1>
             <p className="text-sm text-slate-500">
-              Live session data from Meta Quest headsets.
+              Reaction time and trust signals derived from XR rehabilitation sessions.
             </p>
           </div>
-          <div className="rounded-full bg-white px-5 py-2 text-sm font-medium text-slate-600 shadow-sm">
-            {sessions.length} total sessions
+
+          <div className="flex gap-3 items-center">
+            <div className="rounded-full bg-white px-5 py-2 text-sm font-medium text-[#0f172a] shadow-sm">
+              {sessions.length} total sessions
+            </div>
+            <div className="rounded-full bg-[#e6fffb] px-3 py-1 text-xs font-medium text-[#0f172a] border border-[#06b6d4]">
+              Data Source: public/sessions.json
+            </div>
           </div>
         </header>
 
         <section className="mb-10 grid gap-6 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-slate-500">
-              Average Smoothness
+              Avg Reaction Time (s)
             </p>
-            <p className="mt-2 text-4xl font-semibold text-slate-900">
-              {formatNumber(averageSmoothness)}
+            <p className="mt-2 text-4xl font-semibold text-[#0f172a]">
+              {formatNumber(averageReaction)}
             </p>
-            <span className="text-xs uppercase tracking-wide text-teal-600">
-              Higher is better
+            <span className="text-xs uppercase tracking-wide text-[#06b6d4]">
+              Lower is better
             </span>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Best Score</p>
-            <p className="mt-2 text-4xl font-semibold text-slate-900">
-              {formatNumber(bestScore)}
+            <p className="text-sm font-medium text-slate-500">Trust Rate</p>
+            <p className="mt-2 text-4xl font-semibold text-[#0f172a]">
+              {formatNumber(trustRate, 0)}%
             </p>
-            <span className="text-xs uppercase tracking-wide text-blue-600">
-              Peak performance
+            <span className="text-xs uppercase tracking-wide text-[#ef4444]">
+              Violations: {violationsCount}
             </span>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-slate-500">
               Session Count
             </p>
-            <p className="mt-2 text-4xl font-semibold text-slate-900">
+            <p className="mt-2 text-4xl font-semibold text-[#0f172a]">
               {sessions.length}
             </p>
-            <span className="text-xs uppercase tracking-wide text-rose-600">
-              Lifetime total
+            <span className="text-xs uppercase tracking-wide text-[#06b6d4]">
+              From public sessions.json
             </span>
           </div>
         </section>
@@ -115,43 +121,39 @@ export default async function DashboardPage() {
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-3">Session ID</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Smoothness</th>
-                  <th className="px-4 py-3">Final Score</th>
-                  <th className="px-4 py-3">Duration (s)</th>
-                  <th className="px-4 py-3">Left / Right</th>
+                  <th className="px-4 py-3">Block Hash</th>
+                  <th className="px-4 py-3">Timestamp</th>
+                  <th className="px-4 py-3">Reaction (s)</th>
+                  <th className="px-4 py-3">Violation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-slate-600">
                 {latestSessions.map((session) => (
                   <tr key={session.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-medium text-slate-900">
-                      {session.session_id || "N/A"}
+                      {session.hash || "-"}
                     </td>
                     <td className="px-4 py-3">{formatDate(session.date)}</td>
                     <td className="px-4 py-3 font-semibold text-slate-900">
-                      {formatNumber(session.smoothness)}
+                      {formatNumber(session.reaction_time)}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">
-                      {formatNumber(session.final_score)}
-                    </td>
-                    <td className="px-4 py-3">{formatNumber(session.duration)}</td>
                     <td className="px-4 py-3">
-                      <span className="font-semibold text-emerald-600">
-                        {formatNumber(session.left_smoothness)}
-                      </span>{" "}
-                      /{" "}
-                      <span className="font-semibold text-sky-600">
-                        {formatNumber(session.right_smoothness)}
-                      </span>
+                      {session.violated ? (
+                        <span className="rounded-full bg-[#fff1f2] px-3 py-1 text-xs font-medium text-[#ef4444]">
+                          Violation
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-[#ecfeff] px-3 py-1 text-xs font-medium text-[#06b6d4]">
+                          OK
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
                 {!latestSessions.length && (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={4}
                       className="px-4 py-6 text-center text-slate-400"
                     >
                       No sessions recorded yet.

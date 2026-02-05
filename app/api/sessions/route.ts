@@ -19,12 +19,49 @@ export async function OPTIONS() {
 }
 
 // --------------------
-// GET Sessions
+// GET Sessions - prefer public/sessions.json when present
 // --------------------
+import fs from "fs/promises";
+import path from "path";
+
 export async function GET() {
   try {
-    const sessions = await getSessions();
-    return NextResponse.json({ sessions }, { headers: corsHeaders });
+    const jsonPath = path.join(process.cwd(), "public", "sessions.json");
+    try {
+      const raw = await fs.readFile(jsonPath, "utf8");
+      let parsed: any[] = [];
+      try {
+        parsed = JSON.parse(raw);
+      } catch (err) {
+        // attempt to recover from concatenated JSON objects by inserting commas
+        const normalized = raw.replace(/}\s*{/g, "},\n{");
+        parsed = JSON.parse("[" + normalized + "]");
+      }
+
+      const sessions = parsed.map((entry, idx) => {
+        const evt = entry.event || entry;
+        return {
+          id: idx + 1,
+          hash: entry.hash ?? entry.block_hash ?? null,
+          reaction_time: evt.reaction_time ?? evt.reaction ?? 0,
+          violated: Boolean(evt.violated),
+          date: evt.timestamp ?? evt.date ?? evt.time ?? "",
+        };
+      });
+
+      return NextResponse.json({ sessions }, { headers: corsHeaders });
+    } catch (fsErr) {
+      // fallback to DB-backed sessions: normalize to file-based session shape
+      const dbRows = await getSessions();
+      const sessions = dbRows.map((s) => ({
+        id: s.id,
+        hash: s.session_id ?? null,
+        reaction_time: s.duration ?? s.final_score ?? s.smoothness ?? 0,
+        violated: false,
+        date: s.date ?? "",
+      }));
+      return NextResponse.json({ sessions }, { headers: corsHeaders });
+    }
   } catch (error) {
     console.error("[sessions][GET]", error);
     return NextResponse.json(
