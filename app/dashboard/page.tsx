@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Trust‑Aware Blockchain‑XR | Dashboard",
   description:
-    "Dashboard for the Trust-Aware Blockchain-XR framework: shows reaction time, violation flags and trust signals from IoMT sessions.",
+    "Dashboard for the Trust-Aware Blockchain-XR framework: shows reaction time, violation flags and trusts signals from IoMT sessions.",
 };
 
 const formatNumber = (value: number, digits = 1) =>

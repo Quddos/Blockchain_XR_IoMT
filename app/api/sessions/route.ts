@@ -52,7 +52,7 @@ export async function GET() {
       return NextResponse.json({ sessions }, { headers: corsHeaders });
     } catch (fsErr) {
       // No local sessions.json — return an empty sessions array instead of hitting DB
-      console.warn("[sessions][GET] sessions.json missing or unreadable, returning empty list.", fsErr?.message);
+      console.warn("[sessions][GET] sessions.json missing or unreadable, returning empty list.", String(fsErr));
       return NextResponse.json({ sessions: [] }, { headers: corsHeaders });
     }
   } catch (error) {
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
         await fs.writeFile(jsonPath, JSON.stringify(parsedFile, null, 2), "utf8");
         return NextResponse.json({ success: true, persisted: true }, { headers: corsHeaders });
       } catch (err) {
-        console.warn("[sessions][POST] failed to write sessions.json, continuing without persistence", err?.message);
+        console.warn("[sessions][POST] failed to write sessions.json, continuing without persistence", String(err));
         // fall through to respond success but not persisted
       }
     }
