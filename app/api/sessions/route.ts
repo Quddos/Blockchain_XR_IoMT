@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getSessions, insertSession, sessionSchema } from "@/lib/sessions";
+import { sessionSchema } from "@/lib/sessions";
+
+import fs from "fs/promises";
+import path from "path";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,9 +24,6 @@ export async function OPTIONS() {
 // --------------------
 // GET Sessions - prefer public/sessions.json when present
 // --------------------
-import fs from "fs/promises";
-import path from "path";
-
 export async function GET() {
   try {
     const jsonPath = path.join(process.cwd(), "public", "sessions.json");
@@ -51,16 +51,9 @@ export async function GET() {
 
       return NextResponse.json({ sessions }, { headers: corsHeaders });
     } catch (fsErr) {
-      // fallback to DB-backed sessions: normalize to file-based session shape
-      const dbRows = await getSessions();
-      const sessions = dbRows.map((s) => ({
-        id: s.id,
-        hash: s.session_id ?? null,
-        reaction_time: s.duration ?? s.final_score ?? s.smoothness ?? 0,
-        violated: false,
-        date: s.date ?? "",
-      }));
-      return NextResponse.json({ sessions }, { headers: corsHeaders });
+      // No local sessions.json — return an empty sessions array instead of hitting DB
+      console.warn("[sessions][GET] sessions.json missing or unreadable, returning empty list.", fsErr?.message);
+      return NextResponse.json({ sessions: [] }, { headers: corsHeaders });
     }
   } catch (error) {
     console.error("[sessions][GET]", error);
@@ -89,9 +82,31 @@ export async function POST(request: Request) {
       );
     }
 
-    await insertSession(parsed.data);
+    // If the server is configured to allow file writes (useful for local/dev), append to public/sessions.json.
+    const allowFileWrite = process.env.ENABLE_SESSIONS_FILE_WRITE === "true" || process.env.NODE_ENV === "development";
+    if (allowFileWrite) {
+      try {
+        const jsonPath = path.join(process.cwd(), "public", "sessions.json");
+        const raw = await fs.readFile(jsonPath, "utf8");
+        let parsedFile: any[] = [];
+        try {
+          parsedFile = JSON.parse(raw);
+        } catch (err) {
+          const normalized = raw.replace(/}\s*{/g, "},\n{");
+          parsedFile = JSON.parse("[" + normalized + "]");
+        }
 
-    return NextResponse.json({ success: true }, { headers: corsHeaders });
+        parsedFile.unshift({ event: parsed.data, hash: parsed.data.session_id ?? null });
+        await fs.writeFile(jsonPath, JSON.stringify(parsedFile, null, 2), "utf8");
+        return NextResponse.json({ success: true, persisted: true }, { headers: corsHeaders });
+      } catch (err) {
+        console.warn("[sessions][POST] failed to write sessions.json, continuing without persistence", err?.message);
+        // fall through to respond success but not persisted
+      }
+    }
+
+    // Default behavior: accept payload but do not persist (safe for serverless)
+    return NextResponse.json({ success: true, persisted: false }, { headers: corsHeaders });
   } catch (error) {
     console.error("[sessions][POST]", error);
     return NextResponse.json(
