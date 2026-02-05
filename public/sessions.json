@@ -1,0 +1,104 @@
+{
+"event": {
+    "reaction_time": 1.4444389343261719,
+    "violated": true,
+    "timestamp": "2026-01-28 11:13:52"
+},
+"hash": "279ea2812999bd55e15f9c170cee81229668edbea9f9175d74c7022e71abaafd"
+}
+{
+"event": {
+    "reaction_time": 5.074148178100586,
+    "violated": true,
+    "timestamp": "2026-01-29 13:22:51"
+},
+"hash": "72fbde5b7170726ed0c3094d4d7c716640a02358723fa0cf6cef843cb09d1b30"
+}
+{
+"event": {
+    "reaction_time": 2.856231689453125,
+    "violated": true,
+    "timestamp": "2026-01-29 13:23:41"
+},
+"hash": "10da35a6c2a45383778c9b452d2d8b1eef0211b93221b59466ce9ee5182d0cfc"
+}
+{
+"event": {
+    "reaction_time": 3.281373977661133,
+    "violated": true,
+    "timestamp": "2026-01-29 13:25:31"
+},
+"hash": "bc1a7d7f8ab4b680317a2193fb15f8701434de260037942e85e655587ec5aa01"
+}
+{
+"event": {
+    "reaction_time": 27.556671142578126,
+    "violated": false,
+    "timestamp": "2026-01-29 13:26:58"
+},
+"hash": "1c223f936c16c7997c0b8f4ba9eca9586cb3a63cccc4e8cbc2a58d221e0bc589"
+}
+{
+"event": {
+    "reaction_time": 6.76182746887207,
+    "violated": true,
+    "timestamp": "2026-01-29 13:28:34"
+},
+"hash": "20fe0830075f8acd9efe92fe221a4d0f9779c71a32f542bead5cb2c77dfdcb66"
+}
+{
+"event": {
+    "reaction_time": 4.590576171875,
+    "violated": true,
+    "timestamp": "2026-01-29 13:29:19"
+},
+"hash": "4135d5c414f3743d8625241318c92c9885318f13c45f2d80b9a925abe730a681"
+}
+{
+"event": {
+    "reaction_time": 7.840082168579102,
+    "violated": true,
+    "timestamp": "2026-01-29 13:30:25"
+},
+"hash": "ee62614acb942d8a8203be342bc57c86874c45d205f225328b53d617d14bf041"
+}
+{
+"event": {
+    "reaction_time": 3.236011505126953,
+    "violated": true,
+    "timestamp": "2026-01-29 13:33:11"
+},
+"hash": "ecf7e5d9cb1dba9a4d0fbea696364a512e37deebc8c8fcbc46821f734b645c62"
+}
+{
+"event": {
+    "reaction_time": 9.835941314697266,
+    "violated": true,
+    "timestamp": "2026-01-29 13:34:00"
+},
+"hash": "cda47a3848604b3bd3bc8e74fcc8bb7883c9bbea06e7f95f641751a5a24188dd"
+}
+{
+"event": {
+    "reaction_time": 9.487672805786133,
+    "violated": true,
+    "timestamp": "2026-01-29 13:37:34"
+},
+"hash": "fbdf6435db1ee4e4d130dc6f3b4337de84968e327ee566e85279f8c0d0add4ef"
+}
+{
+"event": {
+    "reaction_time": 5.580413818359375,
+    "violated": true,
+    "timestamp": "2026-01-29 13:38:17"
+},
+"hash": "dac6a942ac9382fbfc671192699a4d24d4bc215af62db3ff2cdf02e4ac7f9267"
+}
+{
+"event": {
+    "reaction_time": 1.6260147094726563,
+    "violated": true,
+    "timestamp": "2026-01-29 13:38:20"
+},
+"hash": "ffb9e1addcc66d99a79f2d4725c1a6eda72f43c3d7638ce9a326e292d18b84f3"
+}
