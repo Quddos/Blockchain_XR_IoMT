@@ -26,9 +26,22 @@ const formatDate = (raw: string) => {
 
 export default async function DashboardPage() {
   // Fetch sessions from the local public JSON file via the API (no cache)
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/sessions`, { cache: "no-store" });
-  const payload = await res.json();
-  const sessions: { id: number; hash?: string; reaction_time: number; violated: boolean; date: string }[] = payload.sessions || [];
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT ?? 3000}`);
+  const fetchUrl = new URL("/api/sessions", baseUrl).toString();
+
+  let payload: { sessions?: unknown[] } = { sessions: [] };
+  try {
+    const res = await fetch(fetchUrl, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Failed to fetch ${fetchUrl}: ${res.status}`);
+    payload = await res.json();
+  } catch (err) {
+    console.error("[dashboard] failed to fetch sessions:", err);
+  }
+
+  const sessions: { id: number; hash?: string; reaction_time: number; violated: boolean; date: string }[] =
+    (payload.sessions as any[]) || [];
 
   const averageReaction =
     sessions.reduce((sum, s) => sum + (s.reaction_time || 0), 0) / (sessions.length || 1);
