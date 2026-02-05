@@ -29,23 +29,30 @@ export async function GET() {
     const jsonPath = path.join(process.cwd(), "public", "sessions.json");
     try {
       const raw = await fs.readFile(jsonPath, "utf8");
-      let parsed: any[] = [];
+      let parsed: unknown[] = [];
       try {
-        parsed = JSON.parse(raw);
-      } catch (err) {
+        parsed = JSON.parse(raw) as unknown[];
+      } catch {
         // attempt to recover from concatenated JSON objects by inserting commas
         const normalized = raw.replace(/}\s*{/g, "},\n{");
-        parsed = JSON.parse("[" + normalized + "]");
+        parsed = JSON.parse("[" + normalized + "]") as unknown[];
       }
 
       const sessions = parsed.map((entry, idx) => {
-        const evt = entry.event || entry;
+        const e = (entry && typeof entry === "object" ? entry as Record<string, unknown> : {}) as Record<string, unknown>;
+        const evt = (e.event && typeof e.event === "object" ? e.event as Record<string, unknown> : e);
+        const get = (obj: Record<string, unknown>, keys: string[]) => {
+          for (const k of keys) {
+            if (k in obj && obj[k] != null) return obj[k];
+          }
+          return undefined;
+        };
         return {
           id: idx + 1,
-          hash: entry.hash ?? entry.block_hash ?? null,
-          reaction_time: evt.reaction_time ?? evt.reaction ?? 0,
-          violated: Boolean(evt.violated),
-          date: evt.timestamp ?? evt.date ?? evt.time ?? "",
+          hash: (get(e, ["hash", "block_hash"]) as string) ?? null,
+          reaction_time: (get(evt as Record<string, unknown>, ["reaction_time", "reaction"]) as number) ?? 0,
+          violated: Boolean(get(evt as Record<string, unknown>, ["violated"])),
+          date: String(get(evt as Record<string, unknown>, ["timestamp", "date", "time"]) ?? ""),
         };
       });
 
@@ -88,12 +95,12 @@ export async function POST(request: Request) {
       try {
         const jsonPath = path.join(process.cwd(), "public", "sessions.json");
         const raw = await fs.readFile(jsonPath, "utf8");
-        let parsedFile: any[] = [];
+        let parsedFile: unknown[] = [];
         try {
-          parsedFile = JSON.parse(raw);
-        } catch (err) {
+          parsedFile = JSON.parse(raw) as unknown[];
+        } catch {
           const normalized = raw.replace(/}\s*{/g, "},\n{");
-          parsedFile = JSON.parse("[" + normalized + "]");
+          parsedFile = JSON.parse("[" + normalized + "]") as unknown[];
         }
 
         parsedFile.unshift({ event: parsed.data, hash: parsed.data.session_id ?? null });

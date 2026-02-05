@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { TrendCharts } from "@/components/dashboard/TrendCharts";;
+import { TrendCharts } from "@/components/dashboard/TrendCharts";
 
 export const dynamic = "force-dynamic";
 
