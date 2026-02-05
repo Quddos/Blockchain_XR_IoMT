@@ -1,22 +1,25 @@
 "use client";
 
-
+import React, { useMemo, useState } from "react";
 import {
   Bar,
-  BarChart,
   Area,
+  ComposedChart,
   AreaChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  Cell,
+  Legend,
 } from "recharts";
 
 type TrendChartsProps = {
-  sessions: { id: number; hash?: string; reaction_time: number; violated: boolean; date: string }[];
+  sessions: { id: number; hash?: string | null; reaction_time: number; violated: boolean; date: string }[];
 };
+
+const PRIMARY = "#06b6d4"; // teal
+const VIOLATION = "#ef4444"; // red
 
 const formatDateLabel = (value: string) => {
   const parsed = new Date(value);
@@ -29,7 +32,68 @@ const formatDateLabel = (value: string) => {
   return value;
 };
 
+function quantiles(nums: number[]) {
+  if (!nums.length) return { min: 0, q1: 0, med: 0, q3: 0, max: 0 };
+  const a = [...nums].sort((x, y) => x - y);
+  const q = (p: number) => {
+    const pos = (a.length - 1) * p;
+    const base = Math.floor(pos);
+    const rest = pos - base;
+    if (a[base + 1] !== undefined) return a[base] + rest * (a[base + 1] - a[base]);
+    return a[base];
+  };
+  return { min: a[0], q1: q(0.25), med: q(0.5), q3: q(0.75), max: a[a.length - 1] };
+}
+
+function kernelDensity(xs: number[], values: number[], bandwidth = 1) {
+  // gaussian KDE
+  const kernel = (x: number) => (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * x * x);
+  return xs.map((x) => {
+    const s = values.reduce((acc, v) => acc + kernel((x - v) / bandwidth), 0);
+    return s / (values.length * bandwidth);
+  });
+}
+
 export function TrendCharts({ sessions }: TrendChartsProps) {
+  // Hooks and computations must run unconditionally (React rules)
+  const ordered = useMemo(() => [...sessions].reverse(), [sessions]);
+  const reactionTimes = useMemo(() => ordered.map((s) => Number(s.reaction_time)).filter(Number.isFinite), [ordered]);
+  const box = useMemo(() => quantiles(reactionTimes), [reactionTimes]);
+  const aggregated = useMemo(() => {
+    const m = new Map<string, { sum: number; cnt: number; viol: number }>();
+    for (const s of ordered) {
+      const label = formatDateLabel(s.date);
+      const cur = m.get(label) ?? { sum: 0, cnt: 0, viol: 0 };
+      cur.sum += Number(s.reaction_time) || 0;
+      cur.cnt += 1;
+      cur.viol += s.violated ? 1 : 0;
+      m.set(label, cur);
+    }
+    return Array.from(m.entries()).map(([dateLabel, v]) => ({ dateLabel, avg: v.cnt ? v.sum / v.cnt : 0, viol: v.viol }));
+  }, [ordered]);
+
+  const violin = useMemo(() => {
+    if (!reactionTimes.length) return { xs: [], density: [] };
+    const min = Math.min(...reactionTimes);
+    const max = Math.max(...reactionTimes);
+    const xs = Array.from({ length: 40 }, (_, i) => min + ((max - min) * i) / 39);
+    const mean = reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length;
+    const std = Math.sqrt(reactionTimes.reduce((s, v) => s + (v - mean) ** 2, 0) / reactionTimes.length) || 1;
+    const bw = 1.06 * std * Math.pow(reactionTimes.length, -1 / 5) || (max - min) / 10 || 1;
+    const density = kernelDensity(xs, reactionTimes, bw);
+    const maxD = Math.max(...density);
+    return { xs, density: density.map((d) => d / (maxD || 1)) };
+  }, [reactionTimes]);
+
+  const eventData = useMemo(() => ordered.map((s) => ({
+    dateLabel: formatDateLabel(s.date),
+    reaction_time: s.reaction_time,
+    violated: s.violated,
+    hash: s.hash,
+  })), [ordered]);
+
+  const [methodOpen, setMethodOpen] = useState(false);
+
   if (!sessions.length) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-500 shadow-sm">
@@ -38,79 +102,167 @@ export function TrendCharts({ sessions }: TrendChartsProps) {
     );
   }
 
-  const chartData = sessions
-    .map((session) => ({
-      date: session.date,
-      dateLabel: formatDateLabel(session.date),
-      reaction_time: session.reaction_time,
-      violated: session.violated ? 1 : 0,
-    }))
-    .reverse(); // chronological order
-
   return (
     <div className="grid gap-6 lg:grid-cols-3">
+      {/* Dual axis: area for avg reaction, bar for violations per day */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-        <div className="mb-4">
-          <p className="text-sm font-medium text-[#06b6d4]">Trust Signals</p>
-          <h3 className="text-xl font-semibold text-[#0f172a]">Reaction Time (Area)</h3>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-[#06b6d4]">Trust Signals</p>
+            <h3 className="text-xl font-semibold text-[#0f172a]">Reaction Time vs Violations (Dual-axis)</h3>
+          </div>
+          <div className="text-sm text-slate-500">Average reaction (left) • violation count (right)</div>
         </div>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="reactionGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.32} />
-                  <stop offset="100%" stopColor="#06b6d4" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+            <ComposedChart data={aggregated}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1faff" />
               <XAxis dataKey="dateLabel" stroke="#94a3b8" />
-              <YAxis stroke="#94a3b8" />
+              <YAxis yAxisId="left" stroke="#94a3b8" />
+              <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" allowDecimals={false} />
               <Tooltip />
-              <Area
-                type="monotone"
-                dataKey="reaction_time"
-                stroke="#0f172a"
-                strokeWidth={2}
-                fill="url(#reactionGradient)"
-                dot={{ r: 2 }}
-              />
-            </AreaChart>
+              <Legend />
+              <Area yAxisId="left" type="monotone" dataKey="avg" name="Avg Reaction (s)" stroke={PRIMARY} fill={PRIMARY} fillOpacity={0.08} />
+              <Bar yAxisId="right" dataKey="viol" name="Violations" barSize={12} fill={VIOLATION} />
+            </ComposedChart>
           </ResponsiveContainer>
+        </div>
+
+        <div className="mt-6">
+          <div className="text-sm font-medium text-[#06b6d4]">Event detail</div>
+          <div className="h-32 mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+            <div className="rounded-md border border-slate-100 bg-white p-4 text-sm text-slate-600">
+              <div className="font-semibold text-slate-900">Box plot — reaction time distribution</div>
+              <div className="mt-3">
+                {/* Box plot */}
+                <svg width="100%" height="60" viewBox="0 0 300 60" preserveAspectRatio="none">
+                  <g transform="translate(10,8)">
+                    {/* scale */}
+                    {reactionTimes.length ? (
+                      (() => {
+                        const w = 260;
+                        const min = Math.min(...reactionTimes);
+                        const max = Math.max(...reactionTimes);
+                        const scale = (v: number) => ((v - min) / (max - min || 1)) * w;
+                        const q = box;
+                        const whiskerLow = Math.max(q.min, q.q1 - 1.5 * (q.q3 - q.q1));
+                        const whiskerHigh = Math.min(q.max, q.q3 + 1.5 * (q.q3 - q.q1));
+                        return (
+                          <>
+                            {/* whiskers */}
+                            <line x1={scale(whiskerLow)} x2={scale(q.q1)} y1={25} y2={25} stroke="#94a3b8" strokeWidth={1} />
+                            <line x1={scale(q.q3)} x2={scale(whiskerHigh)} y1={25} y2={25} stroke="#94a3b8" strokeWidth={1} />
+                            {/* box */}
+                            <rect x={scale(q.q1)} y={12} width={Math.max(1, scale(q.q3) - scale(q.q1))} height={26} fill="#ecfeff" stroke={PRIMARY} />
+                            {/* median */}
+                            <line x1={scale(q.med)} x2={scale(q.med)} y1={12} y2={38} stroke="#0f172a" strokeWidth={2} />
+                            {/* whisker caps */}
+                            <line x1={scale(whiskerLow)} x2={scale(whiskerLow)} y1={18} y2={32} stroke="#94a3b8" />
+                            <line x1={scale(whiskerHigh)} x2={scale(whiskerHigh)} y1={18} y2={32} stroke="#94a3b8" />
+                          </>
+                        );
+                      })()
+                    ) : (
+                      <text x="10" y="25" fill="#94a3b8">No data</text>
+                    )}
+                  </g>
+                </svg>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-slate-100 bg-white p-4 text-sm text-slate-600">
+              <div className="font-semibold text-slate-900">Violin plot — reaction time density</div>
+              <div className="mt-3">
+                <svg width="100%" height="60" viewBox="0 0 300 60" preserveAspectRatio="none">
+                  <g transform="translate(150,30)">
+                    {violin.xs.length ? (
+                      (() => {
+                        const w = 120; // max half width
+                        const h = 40;
+                        const pts: string[] = [];
+                        // build right side then left side reverse
+                        const min = Math.min(...reactionTimes);
+                        const max = Math.max(...reactionTimes);
+                        for (let i = 0; i < violin.xs.length; i++) {
+                          const t = violin.xs[i];
+                          const d = violin.density[i];
+                          const x = ((t - min) / (max - min || 1)) * 120 - 60; // center
+                          const y = ((i / (violin.xs.length - 1)) * h) - h / 2;
+                          const rx = d * w;
+                          pts.push(`${x + rx},${y}`);
+                        }
+                        for (let i = violin.xs.length - 1; i >= 0; i--) {
+                          const t = violin.xs[i];
+                          const d = violin.density[i];
+                          const x = ((t - min) / (max - min || 1)) * 120 - 60;
+                          const y = ((i / (violin.xs.length - 1)) * h) - h / 2;
+                          const rx = -d * w;
+                          pts.push(`${x + rx},${y}`);
+                        }
+                        return <path d={`M ${pts.join(" ")} Z`} fill="#ecfeff" stroke={PRIMARY} />;
+                      })()
+                    ) : (
+                      <text x="-30" y="0" fill="#94a3b8">No data</text>
+                    )}
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-4">
-          <p className="text-sm font-medium text-[#ef4444]">Violations</p>
-          <h3 className="text-xl font-semibold text-[#0f172a]">Violation Events (Mini-bar)</h3>
-        </div>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#fff5f5" />
-              <XAxis dataKey="dateLabel" stroke="#94a3b8" />
-              <YAxis stroke="#94a3b8" allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="violated" maxBarSize={18}>
-                {chartData.map((entry, idx) => (
-                  <Cell key={`cell-${idx}`} fill={entry.violated ? "#ef4444" : "#e6e6e6"} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
+      {/* Mini-bar of per-event violations + area with caps colored by violation */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-[#06b6d4]">Overview</p>
             <h3 className="text-xl font-semibold text-[#0f172a]">Reaction Time Snapshot</h3>
           </div>
-          <span className="text-sm text-slate-500">Area shows median trend — bars show violation frequency.</span>
+          <div className="text-sm text-slate-500">Area shows per-event reaction time — points colored by violation state.</div>
         </div>
-        <div className="h-56 flex items-center justify-center text-slate-500">Area + mini-bar view highlights reaction-time trends and violation occurrences.</div>
+
+        <div className="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={eventData}>
+              <defs>
+                <linearGradient id="evtGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.18} />
+                  <stop offset="100%" stopColor="#06b6d4" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f7fbfc" />
+              <XAxis dataKey="dateLabel" stroke="#94a3b8" />
+              <YAxis stroke="#94a3b8" />
+              <Tooltip />
+              <Area type="monotone" dataKey="reaction_time" stroke={PRIMARY} fill="url(#evtGrad)" dot={(props: { cx?: number; cy?: number; payload?: Record<string, unknown> }) => {
+                const { cx, cy, payload } = props;
+                if (cx == null || cy == null) return null;
+                const violated = payload && (payload.violated === true || payload.violated === 1);
+                return <circle cx={cx} cy={cy} r={5} fill={violated ? VIOLATION : PRIMARY} stroke="#fff" strokeWidth={1} />;
+              }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="mt-6">
+          <div className="rounded-md border border-slate-100 bg-white p-4 text-sm text-slate-600">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-slate-900">Methodology</div>
+                <div className="text-xs text-slate-500">Behavioural data summary and experimental context</div>
+              </div>
+              <button onClick={() => setMethodOpen((s) => !s)} className="text-sm text-[#06b6d4] underline">
+                {methodOpen ? "Hide" : "Show"}
+              </button>
+            </div>
+            {methodOpen && (
+              <div className="mt-3 text-xs text-slate-600 leading-relaxed">
+                The IoMT system was implemented using Unity XR and deployed on a Meta Quest headset with hand-tracking-based locomotion control. Participants navigated a virtual wheelchair through a digital twin urban intersection containing traffic signals and autonomous NPC vehicles. Each experimental session consisted of multiple traffic decision trials, during which behavioural data were recorded automatically. For each trial, reaction time, movement behaviour, traffic-rule compliance, and timestamps were logged locally in structured JSON format. Selected events were additionally hashed using SHA-256 to enable integrity verification and blockchain-ready aggregation. Reaction time is computed as the difference between entry into the decision zone and initiation of movement. Violations indicate movement during restricted signal states.
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

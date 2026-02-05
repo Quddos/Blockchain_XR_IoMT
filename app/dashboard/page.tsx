@@ -26,7 +26,7 @@ const formatDate = (raw: string) => {
 
 export default async function DashboardPage() {
   // Load sessions: prefer server-side direct file read (fast & reliable), fallback to API fetch
-  let payload: { sessions?: unknown[] } = { sessions: [] };
+  const payload: { sessions?: unknown[] } = { sessions: [] };
   try {
     // Try to read directly from the bundled public JSON file (server-side)
     const fs = await import("fs/promises");
@@ -59,8 +59,24 @@ export default async function DashboardPage() {
     }
   }
 
-  const sessions: { id: number; hash?: string; reaction_time: number; violated: boolean; date: string }[] =
-    (payload.sessions as any[]) || [];
+// Normalize sessions so each item has top-level fields expected by the UI
+  const rawSessions = (payload.sessions as unknown[]) || [];
+  const sessions: { id: number; hash?: string | null; reaction_time: number; violated: boolean; date: string }[] = rawSessions.map((entry, idx) => {
+    const e = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+    const evt = e.event && typeof e.event === "object" ? (e.event as Record<string, unknown>) : e;
+    const get = (obj: Record<string, unknown>, keys: string[]) => {
+      for (const k of keys) if (k in obj && obj[k] != null) return obj[k];
+      return undefined;
+    };
+
+    return {
+      id: (get(e, ["id"]) as number) ?? idx + 1,
+      hash: (get(e, ["hash", "block_hash"]) as string) ?? null,
+      reaction_time: Number(get(evt as Record<string, unknown>, ["reaction_time", "reaction"]) ?? 0),
+      violated: Boolean(get(evt as Record<string, unknown>, ["violated"]) ?? false),
+      date: String(get(evt as Record<string, unknown>, ["timestamp", "date", "time"]) ?? ""),
+    };
+  });
 
   const averageReaction =
     sessions.reduce((sum, s) => sum + (s.reaction_time || 0), 0) / (sessions.length || 1);
@@ -88,9 +104,6 @@ export default async function DashboardPage() {
           </div>
 
           <div className="flex gap-3 items-center">
-            <div className="rounded-full bg-white px-5 py-2 text-sm font-medium text-[#0f172a] shadow-sm">
-              {sessions.length} total sessions
-            </div>
             <div className="rounded-full bg-[#e6fffb] px-3 py-1 text-xs font-medium text-[#0f172a] border border-[#06b6d4]">
               Data Source: public/sessions.json
             </div>
