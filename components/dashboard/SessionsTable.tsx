@@ -15,7 +15,6 @@ type SessionsTableProps = {
   thresholdSec: number;
 };
 
-
 export function SessionsTable({
   sessions,
   thresholdSec,
