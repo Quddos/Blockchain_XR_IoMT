@@ -13,18 +13,30 @@ type Session = {
 type SessionsTableProps = {
   sessions: Session[];
   thresholdSec: number;
-  formatDate: (date: string) => string;
-  formatNumber: (value: number, digits?: number) => string;
+};
 };
 
 export function SessionsTable({
   sessions,
   thresholdSec,
-  formatDate,
-  formatNumber,
 }: SessionsTableProps) {
   const [expandedView, setExpandedView] = useState(false);
   const displayedSessions = expandedView ? sessions : sessions.slice(0, 8);
+
+  const formatNumber = (value: number, digits = 1) =>
+    Number.isFinite(value) ? value.toFixed(digits) : "0.0";
+
+  const formatDate = (raw: string) => {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.valueOf())) {
+      return parsed.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+    }
+    return raw;
+  };
 
   return (
     <>

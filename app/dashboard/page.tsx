@@ -232,8 +232,6 @@ export default async function DashboardPage() {
           <SessionsTable
             sessions={sessions}
             thresholdSec={thresholdSec}
-            formatDate={formatDate}
-            formatNumber={formatNumber}
           />
         </section>
       </div>
