@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { TrendCharts } from "@/components/dashboard/TrendCharts";
 import { TrustRateTooltip } from "@/components/dashboard/TrustRateTooltip";
+import { SessionsTable } from "@/components/dashboard/SessionsTable";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,28 @@ const formatDate = (raw: string) => {
   }
   return raw;
 };
+
+// Calculate percentiles/quantiles
+function calculateQuantiles(nums: number[]) {
+  if (!nums.length) return { min: 0, q1: 0, median: 0, q3: 0, max: 0 };
+  const sorted = [...nums].sort((a, b) => a - b);
+  const getQuantile = (p: number) => {
+    const pos = (sorted.length - 1) * p;
+    const base = Math.floor(pos);
+    const rest = pos - base;
+    if (sorted[base + 1] !== undefined) {
+      return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+    }
+    return sorted[base];
+  };
+  return {
+    min: sorted[0],
+    q1: getQuantile(0.25),
+    median: getQuantile(0.5),
+    q3: getQuantile(0.75),
+    max: sorted[sorted.length - 1],
+  };
+}
 
 export default async function DashboardPage() {
   // Load sessions: prefer server-side direct file read (fast & reliable), fallback to API fetch
@@ -97,7 +120,9 @@ export default async function DashboardPage() {
 
   const trustRate = ((sessions.length - violationsCount) / (sessions.length || 1)) * 100;
 
-  const latestSessions = sessions.slice(0, 8);
+  // Calculate reaction time quantiles for statistics
+  const reactionTimes = sessions.map(s => Number(s.reaction_time));
+  const quantiles = calculateQuantiles(reactionTimes);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -134,8 +159,42 @@ export default async function DashboardPage() {
             </div>
           </div>
 
+          {/* Statistics Percentiles Card */}
+          <div className="lg:col-span-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm h-full flex flex-col justify-center">
+              <p className="text-sm font-medium text-slate-500">
+                Reaction Time Distribution
+              </p>
+              <div className="mt-3 space-y-2 text-sm text-slate-600">
+                <div className="flex justify-between">
+                  <span>Min</span>
+                  <span className="font-semibold text-slate-900">{formatNumber(quantiles.min, 2)}s</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Q1 (25%)</span>
+                  <span className="font-semibold text-slate-900">{formatNumber(quantiles.q1, 2)}s</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Median</span>
+                  <span className="font-semibold text-slate-900">{formatNumber(quantiles.median, 2)}s</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Q3 (75%)</span>
+                  <span className="font-semibold text-slate-900">{formatNumber(quantiles.q3, 2)}s</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Max</span>
+                  <span className="font-semibold text-slate-900">{formatNumber(quantiles.max, 2)}s</span>
+                </div>
+              </div>
+              <span className="text-xs uppercase tracking-wide text-[#06b6d4] mt-3">
+                Statistical summary
+              </span>
+            </div>
+          </div>
+
           {/* Trust Signals Chart with Violations Tooltip */}
-          <div className="lg:col-span-9">
+          <div className="lg:col-span-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -165,57 +224,17 @@ export default async function DashboardPage() {
                 Recent Sessions
               </p>
               <h2 className="text-xl font-semibold text-slate-900">
-                Clinician view
+                Clinician view ({sessions.length} total)
               </h2>
             </div>
             <span className="text-sm text-slate-500">Recent activity</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-4 py-3">Block Hash</th>
-                  <th className="px-4 py-3">Timestamp</th>
-                  <th className="px-4 py-3">Reaction (s)</th>
-                  <th className="px-4 py-3">Violation</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white text-slate-600">
-                {latestSessions.map((session) => (
-                  <tr key={session.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {session.hash || "-"}
-                    </td>
-                    <td className="px-4 py-3">{formatDate(session.date)}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">
-                      {formatNumber(session.reaction_time)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {(session.violated || session.reaction_time > thresholdSec) ? (
-                        <span className="rounded-full bg-[#fff1f2] px-3 py-1 text-xs font-medium text-[#ef4444]">
-                          Violation
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-[#ecfeff] px-3 py-1 text-xs font-medium text-[#06b6d4]">
-                          OK
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {!latestSessions.length && (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-6 text-center text-slate-400"
-                    >
-                      No sessions recorded yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <SessionsTable
+            sessions={sessions}
+            thresholdSec={thresholdSec}
+            formatDate={formatDate}
+            formatNumber={formatNumber}
+          />
         </section>
       </div>
     </div>

@@ -6,6 +6,7 @@ import {
   Area,
   ComposedChart,
   AreaChart,
+  BarChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -55,6 +56,24 @@ function kernelDensity(xs: number[], values: number[], bandwidth = 1) {
   });
 }
 
+function createHistogram(values: number[], bins = 8) {
+  if (!values.length) return [];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const binWidth = (max - min) / bins || 1;
+  const histogram: { bin: string; count: number; range: [number, number] }[] = [];
+  
+  for (let i = 0; i < bins; i++) {
+    const start = min + i * binWidth;
+    const end = start + binWidth;
+    const count = values.filter(v => v >= start && (i === bins - 1 ? v <= end : v < end)).length;
+    const binLabel = `${start.toFixed(1)}-${end.toFixed(1)}s`;
+    histogram.push({ bin: binLabel, count, range: [start, end] });
+  }
+  
+  return histogram;
+}
+
 export function TrendCharts({ sessions, compactMode = false }: TrendChartsProps) {
   // Hooks and computations must run unconditionally (React rules)
   const ordered = useMemo(() => [...sessions].reverse(), [sessions]);
@@ -93,6 +112,8 @@ export function TrendCharts({ sessions, compactMode = false }: TrendChartsProps)
     hash: s.hash,
   })), [ordered]);
 
+  const histogram = useMemo(() => createHistogram(reactionTimes, 8), [reactionTimes]);
+
   const [methodOpen, setMethodOpen] = useState(false);
 
   if (!sessions.length) {
@@ -125,12 +146,8 @@ export function TrendCharts({ sessions, compactMode = false }: TrendChartsProps)
     <div className="grid gap-6 lg:grid-cols-3">
       {/* Dual axis: area for avg reaction, bar for violations per day */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-[#06b6d4]">Trust Signals</p>
-            <h3 className="text-xl font-semibold text-[#0f172a]">Reaction Time vs Violations (Dual-axis)</h3>
-          </div>
-          <div className="text-sm text-slate-500">Average reaction (left) • violation count (right)</div>
+        <div className="mb-4">
+          <p className="text-sm text-slate-500">Average reaction (left) • violation count (right)</p>
         </div>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
