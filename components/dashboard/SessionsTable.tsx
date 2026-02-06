@@ -14,7 +14,7 @@ type SessionsTableProps = {
   sessions: Session[];
   thresholdSec: number;
 };
-};
+
 
 export function SessionsTable({
   sessions,
