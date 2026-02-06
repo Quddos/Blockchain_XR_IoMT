@@ -201,10 +201,7 @@ export default async function DashboardPage() {
                   <p className="text-sm font-medium text-[#06b6d4]">Trust Signals</p>
                   <h3 className="text-xl font-semibold text-[#0f172a]">Reaction Time vs Violations (Dual-axis)</h3>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-sm text-slate-500">Average reaction (left) • violation count (right)</div>
-                  <TrustRateTooltip thresholdMs={thresholdMs} />
-                </div>
+                <TrustRateTooltip thresholdMs={thresholdMs} />
               </div>
               <div className="h-72">
                 <TrendCharts sessions={sessions} compactMode={true} />
@@ -215,10 +212,6 @@ export default async function DashboardPage() {
 
         <section className="mb-10">
           <TrendCharts sessions={sessions} compactMode={false} />
-        </section>
-
-        <section className="mb-10">
-          <TrendCharts sessions={sessions} compactMode={true} />
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
