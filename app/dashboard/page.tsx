@@ -103,11 +103,7 @@ export default async function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex gap-3 items-center">
-            <div className="rounded-full bg-[#e6fffb] px-3 py-1 text-xs font-medium text-[#0f172a] border border-[#06b6d4]">
-              Data Source: public/sessions.json
-            </div>
-          </div>
+          {/* data source intentionally hidden for privacy */}
         </header>
 
         <section className="mb-10 grid gap-6 md:grid-cols-3">
@@ -127,21 +123,12 @@ export default async function DashboardPage() {
             <p className="mt-2 text-4xl font-semibold text-[#0f172a]">
               {formatNumber(trustRate, 0)}%
             </p>
-            <span className="text-xs uppercase tracking-wide text-[#ef4444]">
-              Violations: {violationsCount}
-            </span>
+            <div className="mt-2">
+              <span className="text-xs uppercase tracking-wide text-[#ef4444]">Violations: {violationsCount}</span>
+              <p className="text-xs text-slate-500 mt-1">Trust Rate = % of sessions without a recorded violation (uses each session's <code>violated</code> flag). No external threshold is applied here.</p>
+            </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">
-              Session Count
-            </p>
-            <p className="mt-2 text-4xl font-semibold text-[#0f172a]">
-              {sessions.length}
-            </p>
-            <span className="text-xs uppercase tracking-wide text-[#06b6d4]">
-              From public sessions.json
-            </span>
-          </div>
+          {/* Session count card removed to avoid exposing total session numbers */}
         </section>
 
         <section className="mb-10">
@@ -158,9 +145,7 @@ export default async function DashboardPage() {
                 Clinician view
               </h2>
             </div>
-            <span className="text-sm text-slate-500">
-              Showing last {latestSessions.length} sessions
-            </span>
+            <span className="text-sm text-slate-500">Recent activity</span>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">

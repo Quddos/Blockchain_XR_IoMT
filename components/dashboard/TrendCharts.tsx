@@ -128,92 +128,11 @@ export function TrendCharts({ sessions }: TrendChartsProps) {
           </ResponsiveContainer>
         </div>
 
-        <div className="mt-6">
-          <div className="text-sm font-medium text-[#06b6d4]">Event detail</div>
-          <div className="h-32 mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-            <div className="rounded-md border border-slate-100 bg-white p-4 text-sm text-slate-600">
-              <div className="font-semibold text-slate-900">Box plot — reaction time distribution</div>
-              <div className="mt-3">
-                {/* Box plot */}
-                <svg width="100%" height="60" viewBox="0 0 300 60" preserveAspectRatio="none">
-                  <g transform="translate(10,8)">
-                    {/* scale */}
-                    {reactionTimes.length ? (
-                      (() => {
-                        const w = 260;
-                        const min = Math.min(...reactionTimes);
-                        const max = Math.max(...reactionTimes);
-                        const scale = (v: number) => ((v - min) / (max - min || 1)) * w;
-                        const q = box;
-                        const whiskerLow = Math.max(q.min, q.q1 - 1.5 * (q.q3 - q.q1));
-                        const whiskerHigh = Math.min(q.max, q.q3 + 1.5 * (q.q3 - q.q1));
-                        return (
-                          <>
-                            {/* whiskers */}
-                            <line x1={scale(whiskerLow)} x2={scale(q.q1)} y1={25} y2={25} stroke="#94a3b8" strokeWidth={1} />
-                            <line x1={scale(q.q3)} x2={scale(whiskerHigh)} y1={25} y2={25} stroke="#94a3b8" strokeWidth={1} />
-                            {/* box */}
-                            <rect x={scale(q.q1)} y={12} width={Math.max(1, scale(q.q3) - scale(q.q1))} height={26} fill="#ecfeff" stroke={PRIMARY} />
-                            {/* median */}
-                            <line x1={scale(q.med)} x2={scale(q.med)} y1={12} y2={38} stroke="#0f172a" strokeWidth={2} />
-                            {/* whisker caps */}
-                            <line x1={scale(whiskerLow)} x2={scale(whiskerLow)} y1={18} y2={32} stroke="#94a3b8" />
-                            <line x1={scale(whiskerHigh)} x2={scale(whiskerHigh)} y1={18} y2={32} stroke="#94a3b8" />
-                          </>
-                        );
-                      })()
-                    ) : (
-                      <text x="10" y="25" fill="#94a3b8">No data</text>
-                    )}
-                  </g>
-                </svg>
-              </div>
-            </div>
-
-            <div className="rounded-md border border-slate-100 bg-white p-4 text-sm text-slate-600">
-              <div className="font-semibold text-slate-900">Violin plot — reaction time density</div>
-              <div className="mt-3">
-                <svg width="100%" height="60" viewBox="0 0 300 60" preserveAspectRatio="none">
-                  <g transform="translate(150,30)">
-                    {violin.xs.length ? (
-                      (() => {
-                        const w = 120; // max half width
-                        const h = 40;
-                        const pts: string[] = [];
-                        // build right side then left side reverse
-                        const min = Math.min(...reactionTimes);
-                        const max = Math.max(...reactionTimes);
-                        for (let i = 0; i < violin.xs.length; i++) {
-                          const t = violin.xs[i];
-                          const d = violin.density[i];
-                          const x = ((t - min) / (max - min || 1)) * 120 - 60; // center
-                          const y = ((i / (violin.xs.length - 1)) * h) - h / 2;
-                          const rx = d * w;
-                          pts.push(`${x + rx},${y}`);
-                        }
-                        for (let i = violin.xs.length - 1; i >= 0; i--) {
-                          const t = violin.xs[i];
-                          const d = violin.density[i];
-                          const x = ((t - min) / (max - min || 1)) * 120 - 60;
-                          const y = ((i / (violin.xs.length - 1)) * h) - h / 2;
-                          const rx = -d * w;
-                          pts.push(`${x + rx},${y}`);
-                        }
-                        return <path d={`M ${pts.join(" ")} Z`} fill="#ecfeff" stroke={PRIMARY} />;
-                      })()
-                    ) : (
-                      <text x="-30" y="0" fill="#94a3b8">No data</text>
-                    )}
-                  </g>
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Event detail plots removed — not relevant for this view */}
       </div>
 
       {/* Mini-bar of per-event violations + area with caps colored by violation */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-1">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-[#06b6d4]">Overview</p>
