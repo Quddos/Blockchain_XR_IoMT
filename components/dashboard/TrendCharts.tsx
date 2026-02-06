@@ -144,29 +144,6 @@ export function TrendCharts({ sessions, compactMode = false }: TrendChartsProps)
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
-      {/* Dual axis: area for avg reaction, bar for violations per day */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-        <div className="mb-4">
-          <p className="text-sm text-slate-500">Average reaction (left) • violation count (right)</p>
-        </div>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={aggregated}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1faff" />
-              <XAxis dataKey="dateLabel" stroke="#94a3b8" />
-              <YAxis yAxisId="left" stroke="#94a3b8" />
-              <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" allowDecimals={false} />
-              <Tooltip />
-              <Legend />
-              <Area yAxisId="left" type="monotone" dataKey="avg" name="Avg Reaction (s)" stroke={PRIMARY} fill={PRIMARY} fillOpacity={0.08} />
-              <Bar yAxisId="right" dataKey="viol" name="Violations" barSize={12} fill={VIOLATION} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Event detail plots removed — not relevant for this view */}
-      </div>
-
       {/* Mini-bar of per-event violations + area with caps colored by violation */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3">
         <div className="mb-4 flex items-center justify-between">
