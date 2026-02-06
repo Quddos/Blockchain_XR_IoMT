@@ -81,7 +81,18 @@ export default async function DashboardPage() {
   const averageReaction =
     sessions.reduce((sum, s) => sum + (s.reaction_time || 0), 0) / (sessions.length || 1);
 
-  const violationsCount = sessions.reduce((sum, s) => sum + (s.violated ? 1 : 0), 0);
+  // Configurable violation threshold (milliseconds). Read from env var `NEXT_PUBLIC_VIOLATION_THRESHOLD_MS`.
+  // If unset, default to 5000 ms (5 seconds).
+  const thresholdMs = Number(process.env.NEXT_PUBLIC_VIOLATION_THRESHOLD_MS ?? 5000);
+  const thresholdSec = thresholdMs / 1000;
+
+  // A session is considered a violation if either the recorded `violated` flag is true
+  // or the reaction time exceeds the configured threshold.
+  const violationsCount = sessions.reduce((sum, s) => {
+    const byFlag = Boolean(s.violated);
+    const byThreshold = Number(s.reaction_time) > thresholdSec;
+    return sum + (byFlag || byThreshold ? 1 : 0);
+  }, 0);
 
   const trustRate = ((sessions.length - violationsCount) / (sessions.length || 1)) * 100;
 
@@ -123,9 +134,12 @@ export default async function DashboardPage() {
             <p className="mt-2 text-4xl font-semibold text-[#0f172a]">
               {formatNumber(trustRate, 0)}%
             </p>
-            <div className="mt-2">
+            <div className="mt-2 flex items-start gap-3">
               <span className="text-xs uppercase tracking-wide text-[#ef4444]">Violations: {violationsCount}</span>
-              <p className="text-xs text-slate-500 mt-1">Trust Rate = % of sessions without a recorded violation (uses each session's <code>violated</code> flag). No external threshold is applied here.</p>
+              <details className="text-xs text-slate-500 mt-0 [&_summary]:cursor-pointer">
+                <summary className="list-none">What is Trust Rate?</summary>
+                <div className="mt-2">Trust Rate = percentage of sessions without a recorded violation. Violations are counted when the session's <code>violated</code> flag is true or when reaction time exceeds the configured threshold of {thresholdMs} ms.</div>
+              </details>
             </div>
           </div>
           {/* Session count card removed to avoid exposing total session numbers */}
@@ -168,7 +182,7 @@ export default async function DashboardPage() {
                       {formatNumber(session.reaction_time)}
                     </td>
                     <td className="px-4 py-3">
-                      {session.violated ? (
+                      {(session.violated || session.reaction_time > thresholdSec) ? (
                         <span className="rounded-full bg-[#fff1f2] px-3 py-1 text-xs font-medium text-[#ef4444]">
                           Violation
                         </span>

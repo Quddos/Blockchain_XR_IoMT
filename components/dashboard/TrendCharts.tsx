@@ -132,7 +132,7 @@ export function TrendCharts({ sessions }: TrendChartsProps) {
       </div>
 
       {/* Mini-bar of per-event violations + area with caps colored by violation */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-1">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-[#06b6d4]">Overview</p>
