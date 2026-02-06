@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { TrendCharts } from "@/components/dashboard/TrendCharts";
+import { TrustRateTooltip } from "@/components/dashboard/TrustRateTooltip";
 
 export const dynamic = "force-dynamic";
 
@@ -117,36 +118,44 @@ export default async function DashboardPage() {
           {/* data source intentionally hidden for privacy */}
         </header>
 
-        <section className="mb-10 grid gap-6 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">
-              Avg Reaction Time (s)
-            </p>
-            <p className="mt-2 text-4xl font-semibold text-[#0f172a]">
-              {formatNumber(averageReaction)}
-            </p>
-            <span className="text-xs uppercase tracking-wide text-[#06b6d4]">
-              Lower is better
-            </span>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Trust Rate</p>
-            <p className="mt-2 text-4xl font-semibold text-[#0f172a]">
-              {formatNumber(trustRate, 0)}%
-            </p>
-            <div className="mt-2 flex items-start gap-3">
-              <span className="text-xs uppercase tracking-wide text-[#ef4444]">Violations: {violationsCount}</span>
-              <details className="text-xs text-slate-500 mt-0 [&_summary]:cursor-pointer">
-                <summary className="list-none">What is Trust Rate?</summary>
-                <div className="mt-2">Trust Rate = percentage of sessions without a recorded violation. Violations are counted when the session's <code>violated</code> flag is true or when reaction time exceeds the configured threshold of {thresholdMs} ms.</div>
-              </details>
+        <section className="mb-10 grid gap-6 lg:grid-cols-12">
+          {/* Avg Reaction Time Card */}
+          <div className="lg:col-span-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm h-full flex flex-col justify-center">
+              <p className="text-sm font-medium text-slate-500">
+                Avg Reaction Time (s)
+              </p>
+              <p className="mt-2 text-4xl font-semibold text-[#0f172a]">
+                {formatNumber(averageReaction)}
+              </p>
+              <span className="text-xs uppercase tracking-wide text-[#06b6d4]">
+                Lower is better
+              </span>
             </div>
           </div>
-          {/* Session count card removed to avoid exposing total session numbers */}
+
+          {/* Trust Signals Chart with Violations Tooltip */}
+          <div className="lg:col-span-9">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#06b6d4]">Trust Signals</p>
+                  <h3 className="text-xl font-semibold text-[#0f172a]">Reaction Time vs Violations (Dual-axis)</h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-slate-500">Average reaction (left) • violation count (right)</div>
+                  <TrustRateTooltip thresholdMs={thresholdMs} />
+                </div>
+              </div>
+              <div className="h-72">
+                <TrendCharts sessions={sessions} compactMode={true} />
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="mb-10">
-          <TrendCharts sessions={sessions} />
+          <TrendCharts sessions={sessions} compactMode={false} />
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

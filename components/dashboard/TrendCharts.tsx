@@ -16,6 +16,7 @@ import {
 
 type TrendChartsProps = {
   sessions: { id: number; hash?: string | null; reaction_time: number; violated: boolean; date: string }[];
+  compactMode?: boolean;
 };
 
 const PRIMARY = "#06b6d4"; // teal
@@ -54,7 +55,7 @@ function kernelDensity(xs: number[], values: number[], bandwidth = 1) {
   });
 }
 
-export function TrendCharts({ sessions }: TrendChartsProps) {
+export function TrendCharts({ sessions, compactMode = false }: TrendChartsProps) {
   // Hooks and computations must run unconditionally (React rules)
   const ordered = useMemo(() => [...sessions].reverse(), [sessions]);
   const reactionTimes = useMemo(() => ordered.map((s) => Number(s.reaction_time)).filter(Number.isFinite), [ordered]);
@@ -99,6 +100,24 @@ export function TrendCharts({ sessions }: TrendChartsProps) {
       <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-500 shadow-sm">
         Waiting for session data...
       </div>
+    );
+  }
+
+  // Compact mode: only render the dual-axis chart
+  if (compactMode) {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={aggregated}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1faff" />
+          <XAxis dataKey="dateLabel" stroke="#94a3b8" />
+          <YAxis yAxisId="left" stroke="#94a3b8" />
+          <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          <Area yAxisId="left" type="monotone" dataKey="avg" name="Avg Reaction (s)" stroke={PRIMARY} fill={PRIMARY} fillOpacity={0.08} />
+          <Bar yAxisId="right" dataKey="viol" name="Violations" barSize={12} fill={VIOLATION} />
+        </ComposedChart>
+      </ResponsiveContainer>
     );
   }
 
