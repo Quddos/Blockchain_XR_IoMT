@@ -30,6 +30,11 @@ export default function Home() {
           </a>
         </div>
       </div>
+      <div className="mt-20 text-center">
+        <p className="text-lg font-semibold text-slate-700">
+          Thanks for visiting
+        </p>
+      </div>
     </main>
   );
 }
